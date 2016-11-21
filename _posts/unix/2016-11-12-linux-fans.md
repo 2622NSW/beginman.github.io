@@ -7,11 +7,11 @@ tags: [docker, redis, nodejs]
 
 **发行版本**
 
-![](media/14789234689848.jpg)
+![](http://beginman.qiniudn.com/2016-11-21-14789234689848.jpg)
 
 **架构设计**
 
-![](media/14789235355920.jpg)
+![](http://beginman.qiniudn.com/2016-11-21-14789235355920.jpg)
 
 Linux的图形界面效率比Windows要差，因为Linux靠多层软件协作，而Windows平铺直人。
 
@@ -26,7 +26,7 @@ $ less love_me.jpg
 ...
 ```
 
-![](media/14789242517091.jpg)
+![](http://beginman.qiniudn.com/2016-11-21-14789242517091.jpg)
 
 真是让人蜜汁感动啊。
 
