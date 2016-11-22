@@ -497,7 +497,7 @@ fun LastMod()
 	else
 		let l = line("$")
 	endif
-	exe "1," . l . "g/Last modified:.*/s/Last modified:.*/Last modified: " .strftime("%Y-%m-%d %T")
+	exe "silent! 1," . l . "g/Last modified:.*/s/Last modified:.*/Last modified: " .strftime("%Y-%m-%d %T")
 endfun
 
 fun FileName()
@@ -542,6 +542,7 @@ endfun
 - `ks`: 保存当前位置到 's' 标记
 - `call LastMod()`: 调用 LastMod() 函数完成工作
 - `'s`:光标回到旧的位置
+- `silent!` 不显示错误信息，比如打开一个使用上述模板的py，如果没匹配上就有错误msg比较烦人。
 
 LastMode() 函数先检查文件是否少于 10 行，然后用 "`:g`" 命令查找包含 "Last
 Modified:" 的行。在这些行上执行 "`:s`" 命令实现从已有的时间到当前时间的替换。
