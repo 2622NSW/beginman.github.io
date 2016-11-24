@@ -288,12 +288,15 @@ print globals()
 输出如下：
 
 ```python
-{{'a': <module 'a' from '/xx/test/a.pyc'>, 'b': <module 'b' from '/xx/test/b.pyc'>}
+{
+    'a': <module 'a' from '/xx/test/a.pyc'>, 
+    'b': <module 'b' from '/xx/test/b.pyc'>
+}
 ```
 
 看，两个命名空间形式完全不一样。原因如下：
 
 1. from语句用于将模块具体定义加载到当前命名空间中，不会创建一个名称来引用模块命名空间，而是将模块定义的对象放在了当前的命名空间。使用 from module import xx，实际是从另一个模块(module)中将指定的函数和属性等导入到自己的名字空间，这样就可以直接访问它们却不需要引用它们所来源的模块。
-2. 使用import module，模块自身被导入，但是它保持着自已的名字空间，需要使用模块名来访问它的函数或属性：`module.xx`
+2. 使用import module，模块自身被导入，但是它保持着自已的名字空间，需要使用模块名来访问它的函数或属性：module.xx
 
 
