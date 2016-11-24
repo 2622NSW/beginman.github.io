@@ -30,7 +30,7 @@ tags: [python]
 
 切入主题就是因为不了解Python import钩子，借此机会学习一下。
 
-# 一. 作用域和命名空间（Scope and Namespace）
+# 一. 作用域和命名空间
 
 ## 1.1 概念
 
@@ -46,6 +46,163 @@ tags: [python]
 
 **在C++和Python等中，命名空间本身的标识符也属于一个外层的命名空间，也就是说命名空间可以嵌套，构成一个命名空间树，树根则是无名的全局命名空间。**
 
+
+## 1.2 Python命名空间
+
+**Python命名空间就像一个字典，k是变量名，v是变量值。**
+
+我于今年1月份写过一篇博客总结了[**python 导入机制**](http://beginman.cn/2016/01/27/python-import-mechanism), 洋洋洒洒的一大篇，讽刺的是，过了快一年了，又开始研究Python的导入机制了，**学的东西没有印在脑子里，没有自己深刻的认识，无异于浪费时间精力重复而已。**
+
+### 1.2.1 命名空间分类
+
+**有三类命名空间：**
+
+1. **内置**命名空间，built-in names（包括内置函数，内置常量，内置类型）
+2. **全局**命名空间，如一个模块的global names（这个模块定义的函数，类，变量）
+3. **局部**命名空间，如一个函数的所有local names；类对象的所有属性（数据成员，成员函数）等
+
+其层次结构如下：
+
+![](http://beginman.qiniudn.com/2016-11-24-14799711459759.jpg)
+
+![](http://beginman.qiniudn.com/2016-11-24-14799684567225.jpg)
+
+### 1.2.2 命名空间生命周期
+
+1. 内置命名空间, Python解释器启动的时候被创建，解释器退出的时候才被删除
+2. 全局命名空间, module被import的时候创建，在解释器退出的时候退出
+3. 局部命名空间, 每次被调用的时候创建，返回或抛出异常时被删除
+
+### 1.2.3 命名空间查找顺序
+
+![](http://beginman.qiniudn.com/2016-11-24-14799737305176.jpg)
+
+### 1.2.4 命名空间的访问
+
+如下：
+
+- `locals() `访问局部命名空间
+- `globals()`访问全局命名空间
+
+测试代码如下：
+
+```python
+In [2]: name = 'beginman'
+
+In [3]: globals()
+Out[3]:
+{
+ ......
+ '__builtin__': <module '__builtin__' (built-in)>,
+ '__builtins__': <module '__builtin__' (built-in)>,
+ '__doc__': 'Automatically created module for IPython interactive environment',
+ '__name__': '__main__',
+ 'name': 'beginman'
+}
+
+In [9]: def ts(t):
+   ...:     """doc..."""
+   ...:     a = 100
+   ...:     func = lambda m: m * 100
+   ...:     print locals()
+   ...:
+   ...:
+
+In [10]: ts(1)
+{'a': 100, 't': 1, 'func': <function <lambda> at 0x10e38fed8>}
+```
+
+从上可知，**内置命名也同样被包含在一个模块中，它被称作 `__builtin__`**
+
+## 1.3 作用域
+
+写了大多命名空间的东西了，也相当于变相地写作用域。刚才`globals()`和`locals()`函数告一段落，这里来看看`global`和`nonlocal`**语句**, 注意，可没有`locals`语句啊。
+
+global用来声明当前模块的全局命名空间的变量，不管定义与否都会添加到全局空间中。
+
+如下测试:
+
+```python
+
+def test():
+    a = 1
+
+    def get_local():
+        a = 10
+
+    def do_global():
+        global a
+        a = 100
+
+    def change_global():
+        # globals()可变, 但locals()只读
+        globals()['a'] = 0
+
+    def _local():
+        del globals()['a']
+
+    get_local()
+    print a     # local a
+
+    do_global()     # 设置 a 为全局变量, 且值为100
+    print a         # 按照命名空间访问顺序,先从局部开始, 所有是1
+
+    change_global() # 同上
+    print a
+
+test()
+print a   
+
+# out:
+1
+1
+1
+0
+```
+
+如果在test()执行体加上`_local()`执行函数，那么将会删除全局变量a， 此时在最后的`print a` 就会`NameError`。
+
+`nonlocal`在Py3才有, 它在函数或其他作用域中使用外层(非全局)变量, 从声明处从里到外的namespace去搜寻这个变量，直到模块的全局域（不包括全局域），找到了则引用这个命名空间的这个名字和对象，若作赋值操作，则直接改变外层域中的这个名字的绑定。nonlocal语句声明的变量不会在当前scope的namespace字典中加入一个key-value对，如果在外层域中没有找到，则如下报错。
+
+```python
+>>>SyntaxError: no binding for nonlocal 'spam' found
+```
+
+如下测试：
+
+```python
+def test():
+    a = 1
+
+    def get_local():
+        a = 10
+
+    def do_global():
+        global a
+        a = 100
+        
+    def do_nonlocal():
+        nonlocal a
+        a = 1000
+
+    get_local()
+    print(a)     # local a
+
+    do_nonlocal()
+    print(a)        # 1000
+
+    do_global()     # 设置 a 为全局变量, 且值为100
+    print(a)         # 1000
+
+
+test()
+print(a)            # 100
+# out:
+1
+1000
+1000
+100
+```
 
 
 
