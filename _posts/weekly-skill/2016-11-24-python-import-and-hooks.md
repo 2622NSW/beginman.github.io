@@ -287,7 +287,7 @@ print globals()
 
 输出如下：
 
-```python
+```
 {
     'a': <module 'a' from '/xx/test/a.pyc'>, 
     'b': <module 'b' from '/xx/test/b.pyc'>
@@ -299,4 +299,70 @@ print globals()
 1. from语句用于将模块具体定义加载到当前命名空间中，不会创建一个名称来引用模块命名空间，而是将模块定义的对象放在了当前的命名空间。使用 from module import xx，实际是从另一个模块(module)中将指定的函数和属性等导入到自己的名字空间，这样就可以直接访问它们却不需要引用它们所来源的模块。
 2. 使用import module，模块自身被导入，但是它保持着自已的名字空间，需要使用模块名来访问它的函数或属性：module.xx
 
+
+## 2.3 关于import, from 变量赋值的问题
+
+如2.2所说，现在思考一个问题，既然from将定义的变量放在当前命名空间了，那么如果更改了该变量，是否所有的引用都会更改呢？ 还是上面的例子，进行试验：
+
+```python
+# a.py
+m = 10
+def test_a():
+    print m
+    
+# b.py
+n = 10
+
+def test_b():
+    print n
+    
+# __init__.py
+from a import m, test_a     # from module import  xxx
+import b                    # import module
+
+print m
+test_a()
+
+# 重新赋值
+m = 100
+print m
+test_a()
+
+print '---------\n'
+
+print b.n
+b.test_b()
+
+b.n = 1000
+print b.n
+b.test_b()
+```
+
+先猜想一下输出吧, ... 5s后.
+
+打印如下：
+
+```bash
+10
+10
+100
+10
+
+10
+10
+1000
+1000
+```
+
+这里可发现from 导入的变量重新赋值后没有任何变化，而import形式的却发生变化了。
+
+这样要说下Python的赋值操作了。
+
+>Python变量的赋值不是一种存储操作，也就是说，上例中对m的赋值不会将新值存储在m中并覆盖旧值，而是将创建包含值为100的新对象，并用名称m来引用它，此时，m不再绑定到导入模块中的值（既a.py下的m的值）,而是绑定到其他对象上。
+
+**赋值操作只是把名字和对象做一个绑定，也就是绑定或重绑定的作用（bind or rebind）**
+
+那么b.n = 1000为什么生效了呢？因为module是个对象，那么但凡是对象，都有句点操作`.`, b.n是可变的，所以`b.n=1000`就是将值为1000的对象绑定到b.n上，还是原先的对象。那么test_b函数`print n` 这里的n就是b模块对象的n变量了，既b.n。
+
+![](http://beginman.qiniudn.com/2016-11-24-14799804812034.jpg)
 
