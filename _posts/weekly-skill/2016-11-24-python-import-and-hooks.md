@@ -296,8 +296,8 @@ print globals()
 
 看，两个命名空间形式完全不一样。原因如下：
 
-1. from语句用于将模块具体定义加载到当前命名空间中，不会创建一个名称来引用模块命名空间，而是将模块定义的对象放在了当前的命名空间。使用 from module import xx，实际是从另一个模块(module)中将指定的函数和属性等导入到自己的名字空间，这样就可以直接访问它们却不需要引用它们所来源的模块。
-2. 使用import module，模块自身被导入，但是它保持着自已的名字空间，需要使用模块名来访问它的函数或属性：module.xx
+1. **from语句用于将模块具体定义加载到当前命名空间中，不会创建一个名称来引用模块命名空间，而是将模块定义的对象放在了当前的命名空间。使用 from module import xx，实际是从另一个模块(module)中将指定的函数和属性等导入到自己的名字空间，这样就可以直接访问它们却不需要引用它们所来源的模块。**
+2. **使用import module，模块自身被导入，但是它保持着自已的名字空间，需要使用模块名来访问它的函数或属性：module.xx**
 
 
 ## 2.3 关于import, from 变量赋值的问题
@@ -365,4 +365,269 @@ b.test_b()
 那么b.n = 1000为什么生效了呢？因为module是个对象，那么但凡是对象，都有句点操作`.`, b.n是可变的，所以`b.n=1000`就是将值为1000的对象绑定到b.n上，还是原先的对象。那么test_b函数`print n` 这里的n就是b模块对象的n变量了，既b.n。
 
 ![](http://beginman.qiniudn.com/2016-11-24-14799804812034.jpg)
+
+# 三. import钩子机制
+
+**目标就是如何指明⾃己要引⼊的模块**，比如项目下有个名为string.py的文件，如何使得import string 的操作不是引用标准库的string而是导入我们自己写的string.py呢。
+
+
+## 3.1 python 引入机制
+
+1. relative import
+2. absolute import
+
+**相对引用，相对路径，相对XX, 只要带「相对」字眼的，这里都需要明确『相对于什么』这是关键点，也是易错点。** 比如下面的例子，经常会出错：
+
+```
+test
+├── __init__.py
+├── foo.py
+└── main.py
+```
+
+代码如下:
+
+```python
+# foo.py
+a = 2
+
+# main.py
+print "__name__: ", __name__
+print "__package__: ", __package__
+
+from .foo import a
+print a
+
+```
+
+常见的错误操作:
+
+```python
+# python main.py
+
+__name__:  __main__
+__package__:  None
+Traceback (most recent call last):
+  File "main.py", line 13, in <module>
+    from .foo import a
+ValueError: Attempted relative import in non-package
+
+# python test/main.py
+
+__name__:  __main__
+__package__:  None
+Traceback (most recent call last):
+  File "test/main.py", line 13, in <module>
+    from .foo import a
+ValueError: Attempted relative import in non-package
+```
+
+为什么会出错呢，关键的**相对什么**就出来了，**相对引入使用被引入文件的 `__name__` 属性来决定该文件在整个包结构的位置。那么如果文件的`__name__`没有包含任何包的信息，例如 `__name__` 被设置为了`__main__`，则认为其为‘top level script’，而不管该文件的位置，这个时候相对引入就没有引入的参考物。那么就会出现上述错误。**
+
+>When you execute a file directly, it doesn't have its usual name, but has "`__main__`" as its name instead. So relative imports don't work.
+
+为了解决此类问题，在[PEP 302 -- New Import Hooks](https://www.python.org/dev/peps/pep-0302/)添加了import 钩子，在[PEP 366 -- Main module explicit relative imports](PEP 366 -- Main module explicit relative imports)给出了相对导入解决方案。
+
+使用`-m`选项来执行该文件，并且引用了`__package__`新属性。
+
+```bash
+$ python -m test.main
+
+__name__:  __main__
+__package__:  test
+2
+```
+
+当然还可同时兼顾相对和绝对导入：
+
+```python
+print "__name__: ", __name__
+print "__package__: ", __package__
+
+
+if __name__ == '__main__':
+    if __package__ is None:
+        import sys
+        from os import path
+        sys.path.insert(0, path.dirname( path.dirname( path.abspath(__file__) ) ) )
+        from test.foo import a
+    else:
+        from .foo import a
+
+    print "a: ", a
+```
+
+absolute import 也叫作完全引入, **需要从包目录最顶层目录依次写下，而不能从中间开始。**
+
+```python
+from pkg import foo
+from pkg.moduleA import foo
+```
+
+## 3.2 动态创建模块对象
+
+使用`types`模块和`imp`模块可动态创建模块对象，但都未添加到sys.modules里。
+
+```python
+In [1]: import sys, types
+
+In [2]: m = types.ModuleType("sample", "sample module")  # 用type 创建对象
+
+In [3]: m
+Out[3]: <module 'sample' (built-in)>
+
+In [4]: m.__dict__
+Out[4]: {'__doc__': 'sample module', '__name__': 'sample'}
+
+In [5]: "sample" in sys.modules   # 并未添加到sys.modules
+Out[5]: False
+
+In [6]: m.a = 100
+
+In [7]: m.a
+Out[7]: 100
+
+In [13]: import imp
+
+In [14]: m2 = imp.new_module('test')
+
+In [15]: m2
+Out[15]: <module 'test' (built-in)>
+
+In [16]: m2.__dict__
+Out[16]: {'__doc__': None, '__name__': 'test', '__package__': None}
+```
+
+
+## 3.3 Python import 实现
+
+import语句主要是做了二件事：
+
+1. 查找相应的module
+2. 加载module到local namespace
+
+查找module的过程:
+
+1. 检查 `sys.modules` (保存了之前import的缓存, 生成内存映射关系，存放内存中）,`reload()`可跳过。
+2. 检查 `sys.meta_path`。meta_path 是一个 list，⾥面保存着一些 finder 对象，如果找到该module的话，就会返回一个finder对象。
+3. 检查⼀些隐式的finder对象，不同的python实现有不同的隐式finder，但是都会有 sys.path_hooks, sys.path_importer_cache 以及sys.path。
+4. 都没找到则抛出 ImportError。
+
+### 3.3.1 finder、loader和importer
+
+> **finder**的任务是决定自己是否根据名字找到相应的模块，在py2中，finder对象必须实现find_module()方法，在py3中必须要实现find_module()或者find_loader（)方法。如果finder可以查找到模块，则会返回一个loader对象(在py3.4中，修改为返回一个module specs)。
+> 
+> **loader**则是负责加载模块，它必须实现一个load_module()的方法。
+> 
+> **importer** 则指一个对象，实现了finder和loader的方法。因为Python是duck type，只要实现了方法，就可以认为是该类。
+
+Python import的hook分为二类:
+
+- sys.meta_path默认是空list，可添加finder对象来实现import钩子。导入模块时，遍历finder列表，调用finder.find_module, 直到有一个finder返回一个loader, 然后调用loader的load_module方法，加载模块。 否则进入下一层。
+- sys.path_hooks, 添加一个importer生成器来注册钩子。
+
+如下用sys.meta_path实现每次加载包打印信息的钩子：
+
+```bash
+$ tree test
+├── __init__.py
+├── foo.py
+├── main.py
+└── sub
+    ├── __init__.py
+    ├── bar.py      # b = 100
+```
+
+编写main.py代码：
+
+```python
+import sys
+
+class Watcher(object):
+    @classmethod
+    def find_module(cls, name, path, target=None):
+        print("Importing", name, path, target)
+        return None
+
+sys.meta_path.insert(0, Watcher)
+
+import foo
+from sub import bar
+```
+
+执行代码，运行如下：
+
+```bash
+$ python main.py
+('Importing', 'foo', None, None)
+('Importing', 'sub', None, None)
+('Importing', 'sub.bar', ['/Users/fangpeng/dumps/test/sub'], None)
+```
+
+
+关于sys.path_hooks，添加一系列importer对象来注册钩子，每个对象会使用sys.path项的路径来作为参数被调用。如果它不能处理该路径，就必须抛出ImportError，如果可以，则会返回一个importer对象。之后，不会再尝试其它的sys.path_hooks对象，即使前一个importer出错了。
+
+原理如下：
+
+```python
+
+for mp in sys.meta_path:
+    loader = mp(fullname)
+    if loader is not None:
+        <module> = loader.load_module(fullname)
+        
+for path in sys.path:
+    for hook in sys.path_hooks:
+        try:
+            importer = hook(path)
+        except ImportError:
+            # ImportError, so try the other path hooks
+            pass
+        else:
+            loader = importer.find_module(fullname)
+            <module> = loader.load_module(fullname)
+
+# Not found!
+raise ImportError
+
+```
+
+ 
+# 四. 实战
+
+好了，来解决我的问题，也就是最最最上面的问题。
+
+```python
+import imp
+import ituandui
+
+print ituandui.__version__
+print imp.find_module('ituandui')
+
+# out
+# 1.2.1
+# (None, '/usr/local/lib/python2.7/site-packages/ituandui', ('', '', 5))
+```
+
+这个import是我pip安装过的，现在加钩子更改机制。
+
+
+- [Lazy化库引入](https://github.com/noahmorrison/limp)
+- [通过钩子远程加载模块](http://python3-cookbook.readthedocs.io/zh_CN/latest/c10/p11_load_modules_from_remote_machine_by_hooks.html)
+
+
+
+# 参考
+
+- [A Beginner's Guide to Python's Namespaces, Scope Resolution, and the LEGB Rule](http://sebastianraschka.com/Articles/2014_python_scope_and_namespaces.html)
+- [PyCon2015:Python Module引入机制与最佳实践-流畅](http://www.slideshare.net/ssuserbefd12/pythonmodule)
+- [How to fix “Attempted relative import in non-package”](http://stackoverflow.com/questions/11536764/how-to-fix-attempted-relative-import-in-non-package-even-with-init-py)
+- [import this that and the other thing custom importers](http://www.slideshare.net/Zoom.Quiet/import-this-that-and-the-other-thing-custom-importers)
+- [wiki 命名空间](https://zh.wikipedia.org/wiki/%E5%91%BD%E5%90%8D%E7%A9%BA%E9%97%B4)
+- 《Python参考手册》第八章
+- 《Python Cookbook》
+
+
+(填坑...)
+
 
