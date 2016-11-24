@@ -243,7 +243,7 @@ for k, v in sys.modules.items():
 
 输入如下：
 
-```python
+```
 a <module 'a' from '/xx/test/a.pyc'>
 b <module 'a' from '/xx/test/b.pyc'>
 
@@ -258,5 +258,42 @@ site <module 'site' from '/usr/xx/python/lib/site.pyc'>
 1. module对象
 2. 有内置的module对象
 3. 文件都是pyc, 编译过的字节码
+
+## 2.2 import 和 from 的区别
+
+还是上面的代码，不过`__init__.py`改成这样：
+
+```python
+from a import *
+from b import *
+
+print globals()
+```
+
+使用了`from .. import ..`的形式，来看下全局命名空间里的玩意儿。输出如下：
+
+```python
+{'test_b': <function test_b at 0x107800b90>, 'test_a': <function test_a at 0x107800b18>, '__builtins__': <module '__builtin__' (built-in)>, '__file__': 'xxx.py}
+```
+
+在改下`__init__.py`, 这次使用`import`方式:
+
+```python
+import a
+import b
+
+print globals()
+```
+
+输出如下：
+
+```python
+{{'a': <module 'a' from '/xx/test/a.pyc'>, 'b': <module 'b' from '/xx/test/b.pyc'>}
+```
+
+看，两个命名空间形式完全不一样。原因如下：
+
+1. from语句用于将模块具体定义加载到当前命名空间中，不会创建一个名称来引用模块命名空间，而是将模块定义的对象放在了当前的命名空间。使用 from module import xx，实际是从另一个模块(module)中将指定的函数和属性等导入到自己的名字空间，这样就可以直接访问它们却不需要引用它们所来源的模块。
+2. 使用import module，模块自身被导入，但是它保持着自已的名字空间，需要使用模块名来访问它的函数或属性：`module.xx`
 
 
