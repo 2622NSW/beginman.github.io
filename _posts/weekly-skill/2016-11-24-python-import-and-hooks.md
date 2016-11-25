@@ -611,10 +611,49 @@ print imp.find_module('ituandui')
 
 这个import是我pip安装过的，现在加钩子更改机制。
 
+```python
+import sys
+import imp
+import os
+
+BASE = os.path.join(os.path.dirname(__file__), '../../')
+
+
+class CustomImporter(object):
+
+    PACKAGE_NAME = 'ituandui'
+
+    def find_module(self, fullname, path):
+        if fullname == self.PACKAGE_NAME:
+            return self
+
+        return None
+
+    def load_module(self, fullname):
+        if fullname != self.PACKAGE_NAME:
+            raise ImportError(fullname)
+
+        fn_, path, desc = imp.find_module('ituandui', [BASE])
+        return imp.load_module('ituandui', fn_, path, desc)
+
+
+sys.meta_path.append(CustomImporter())
+
+
+import ituandui
+print ituandui.__version__
+from ituandui import sstr
+print sstr.corver_unicode('good')
+
+# out:
+# 1.2.2
+# good
+```
+
+这下就可以了。更多实战的例子见：
 
 - [Lazy化库引入](https://github.com/noahmorrison/limp)
 - [通过钩子远程加载模块](http://python3-cookbook.readthedocs.io/zh_CN/latest/c10/p11_load_modules_from_remote_machine_by_hooks.html)
-
 
 
 # 参考
@@ -625,9 +664,8 @@ print imp.find_module('ituandui')
 - [import this that and the other thing custom importers](http://www.slideshare.net/Zoom.Quiet/import-this-that-and-the-other-thing-custom-importers)
 - [wiki 命名空间](https://zh.wikipedia.org/wiki/%E5%91%BD%E5%90%8D%E7%A9%BA%E9%97%B4)
 - 《Python参考手册》第八章
-- 《Python Cookbook》
 
 
-(填坑...)
+(完~)
 
 
