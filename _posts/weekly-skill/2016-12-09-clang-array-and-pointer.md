@@ -1,9 +1,7 @@
-
 ---
 layout: post
 title: "C语言的指针与数组种种关系"
 category: "c/c++"
-tags: [sizeof]
 ---
 
 此篇为《C语言点滴》关于指针的总结
@@ -208,6 +206,6 @@ printf(*(*(p+1)+2) == array[1][2] ? "true\n" : "false\n");
 如果还不清楚，就看《深入理解C指针》这本不到200页的书。
 
     
-
+(完)~
 
 
