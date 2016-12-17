@@ -175,6 +175,10 @@ $ sudo nmap -sS -p 0-n ip 或域名
 - DDOS 拒绝服务攻击
 - 恶意扫描攻击(暂无办法解决)
 
+>SYN攻击属于DOS攻击的一种，它利用TCP协议缺陷，通过发送大量的半连接请求，耗费CPU和内存资源。SYN攻击除了能影响主机外，还可以危害路由器、防火墙等网络系统，事实上SYN攻击并不管目标是什么系统，只要这些系统打开TCP服务就可以实施。
+
+
+
 ![](http://beginman.qiniudn.com/2016-12-14-14817295497179.jpg)
 
 ![](http://beginman.qiniudn.com/2016-12-14-14817300354822.jpg)
@@ -190,5 +194,17 @@ $ sudo nmap -sS -p 0-n ip 或域名
 ![](http://beginman.qiniudn.com/2016-12-14-14817304139867.jpg)
 
 
+**参数解释：** 
+
+1. tcp_max_syn_backlog是SYN队列的长度，加大SYN队列长度可以容纳更多等待连接的网络连接数 
+2. tcp_syncooking是一个开关，是否打开syn cookie功能，该功能可以防止部分的SYN攻击 
+3. tcp_synack_retries和tcp_syn_retries定义SYN的重试连接次数，将默认的参数减小来控制SYN连接次数 
+
+编辑完成之后使内核生效 `sysctl -p`
+
+# 参考
+
+[慕课网：Linux系统扫描技术及安全防范](http://www.imooc.com/learn/344)
+[CentOS防止syn攻击](http://www.dockerwy.com/dockewy/221)
 
 
