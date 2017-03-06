@@ -9,7 +9,7 @@ title:               BeginMan
 tagline:             'blog'
 description:         'I am a slow walker, but I never walk backwards.'
 url:                 http://beginman.cn
-baseurl:             ''
+baseurl:             'http://beginman.cn'
 paginate:            5
 #gems: [jekyll-paginate]
 
