@@ -10,7 +10,7 @@ tagline:             'blog'
 description:         'I am a slow walker, but I never walk backwards.'
 url:                 http://beginman.cn
 baseurl:             'http://beginman.cn'
-paginate:            5
+paginate:            20
 #gems: [jekyll-paginate]
 
 # About/contact
